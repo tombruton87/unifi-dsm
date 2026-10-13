@@ -1,0 +1,2 @@
+devicedown="{0} ({1}) has been offline for 10 minutes. Open UniFi Network from the main menu → Devices to see which devices are up."
+devicepending="A UniFi device is waiting to be adopted: {0} ({1}). Open UniFi Network from the main menu → Adopt."

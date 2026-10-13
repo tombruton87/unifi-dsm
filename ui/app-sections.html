@@ -1,0 +1,58 @@
+    <section data-page="devices" hidden>
+      <div class="note">The access points, switches and gateways <a class="uf-link" href="#" target="_blank" rel="noopener">UniFi Network</a> manages, as the package's read-only account sees them. You set them up and change them in UniFi itself; this is the overview.</div>
+      <div class="note warn" id="dv-setup" hidden>UniFi is still being set up for the first time — the setup log on the Overview says where it is.</div>
+      <div class="note bad" id="dv-err" hidden></div>
+      <div class="tiles" id="dv-tiles"></div>
+      <div class="card"><h2>Devices<span class="right muted small" id="dv-at"></span></h2><table><thead><tr><th>Device</th><th>Address</th><th>State</th><th>Firmware</th><th class="n">Clients</th><th class="n">Up for</th></tr></thead><tbody id="dv-list"></tbody></table></div>
+      <div class="card"><h2>When a device goes offline</h2><div class="in">
+        <p class="muted small">DSM tells its administrators when an adopted device has been offline for 10 minutes — the bell in DSM, and on your phone with DSM's email or push notifications — once per outage, and when a new device is waiting to be adopted. Firmware updates are done in UniFi (<b>UniFi Devices</b> → a device → <b>Update</b>).</p></div></div>
+    </section>
+
+    <section data-page="adopt" hidden>
+      <div class="card"><h2>The inform address</h2><div class="in">
+        <p>Every UniFi device reports to UniFi here. A device adopted by this controller is told it by UniFi; a new one, or one moving from another controller, needs it once:</p>
+        <p><span class="inform" id="ad-url">…</span> <button class="btn" id="ad-copy">Copy</button></p>
+        <p class="muted small" id="ad-note"></p></div></div>
+      <div class="card"><h2>Waiting to be adopted</h2><table><thead><tr><th>Device</th><th>Address</th><th>MAC</th><th class="n"></th></tr></thead><tbody id="ad-pending"></tbody></table>
+        <div class="in"><p class="muted small">Adopting is done in UniFi: <b>UniFi Devices</b> → the device → <b>Adopt</b>. It then gets its settings and stays with this controller.</p></div></div>
+      <div class="card"><h2>Adopting a device</h2><div class="in"><ol class="steps">
+        <li><b>By name, with no typing on the device.</b> A new or reset device looks for <code>unifi</code> on your network and informs to <code>http://unifi:8080/inform</code>. Make <code>unifi</code> point at this Synology (<span class="ad-ip">192.168.1.20</span>) in your router's or Pi-hole's local DNS, and new devices appear above by themselves. <span id="ad-8080"></span></li>
+        <li><b>With <code>set-inform</code>.</b> Sign in to the device over SSH — a new or reset device is <code>ssh ubnt@<i>its-address</i></code>, password <code>ubnt</code>; one adopted before uses that controller's device password (UniFi → Settings → System → Advanced → Device SSH Authentication). Then type:<br><code id="ad-cmd">set-inform …</code> <button class="btn" id="ad-copy-cmd" style="height:24px">Copy</button><br>The device appears above within a minute: adopt it in UniFi. If it stays at <i>Adopting</i>, give the same <code>set-inform</code> once more.</li>
+        <li><b>Moving from another controller.</b> Easiest is to restore that controller's backup (a <code>.unf</code> file) in UniFi here first — the devices then know this one already, and only need the <code>set-inform</code> above.</li>
+        <li><b>DHCP option 43</b> on routers that offer it hands devices the address too; see your router's manual.</li></ol>
+        <p class="muted small">UniFi runs in Container Manager, which keeps it off the network's broadcasts: a device on another subnet, or announcing on port 10001, isn't found by itself — which is why the first two ways are the ones that work.</p></div></div>
+      <div class="card"><h2>The address devices use</h2><div class="in">
+        <p class="muted small">UniFi has to tell devices an address they can reach: inside Container Manager it only knows its own internal one. The package sets UniFi's <i>inform host override</i> to this; change it if the Synology's address changes, or to a name your devices can resolve. UniFi stops for a minute while it changes. Devices that can't reach the old address any more need <code>set-inform</code> again.</p>
+        <label class="f"><span>Inform host (this Synology's address, or a name)</span><input type="text" id="ih-host" placeholder="192.168.1.20" style="max-width:280px"></label>
+        <button class="btn" id="ih-save" data-app>Save</button></div></div>
+      <div class="card"><h2>Ports on this Synology</h2><table class="ports"><tbody>
+        <tr><td class="k">Web app (HTTPS)</td><td><span id="pt-web"></span> <span class="muted small">— on the Site address tab</span></td></tr>
+        <tr><td class="k">Device inform (TCP)</td><td><input type="number" id="pt-inform" min="1024" max="65535"></td></tr>
+        <tr><td class="k">STUN (UDP)</td><td><input type="number" id="pt-stun" min="1024" max="65535"></td></tr>
+        <tr><td class="k">Device discovery (UDP)</td><td><input type="number" id="pt-disc" min="1024" max="65535"></td></tr>
+        <tr><td class="k">Guest portal</td><td><label><input type="checkbox" id="pt-portal"> Publish UniFi's guest portal</label> <span id="pt-portal-ports">— HTTP <input type="number" id="pt-ph" min="1024" max="65535"> HTTPS <input type="number" id="pt-phs" min="1024" max="65535"></span></td></tr>
+        </tbody></table>
+        <div class="in"><p class="muted small">Each is checked before it's used: a port something else on this Synology has is refused. <b>Changing the inform port</b> means every device adopted on the old one needs <code>set-inform</code> with the new address, and new devices no longer find UniFi by name (that only works on 8080). DSM's firewall list (Control Panel → Security → Firewall → Edit Rules → Select from a list of built-in applications) has an entry for each.</p>
+        <p class="muted small">Not published: 1900/UDP (UniFi announcing itself on the local network — broadcasts don't reach Container Manager's network), 6789 (the old mobile speed test) and 5514/UDP (remote syslog from devices). The guest portal (8880 and 8843) is only needed for a hotspot or guest Wi-Fi with a portal page.</p>
+        <button class="btn" id="pt-save" data-app>Save ports and restart UniFi</button></div></div>
+    </section>
+
+    <section data-page="memory" hidden>
+      <div class="note">UniFi is a Java application with a MongoDB database. Both take memory from the Synology whether the network is big or small, so on a NAS with 2–4 GB it pays to keep them modest. A home or small office (up to 30 devices, a few hundred clients) runs well on the smallest settings.</div>
+      <div class="tiles" id="mm-tiles"></div>
+      <div class="card"><h2>Settings</h2><div class="in">
+        <label class="f"><span>UniFi's Java heap (the most it may use; it takes about 300 MB more besides)</span><select id="mm-heap" style="max-width:240px">
+          <option value="384">384 MB — very small networks</option><option value="512">512 MB — 2 GB NAS</option><option value="768">768 MB — 4 GB NAS</option>
+          <option value="1024">1 GB — UniFi's own default</option><option value="1536">1.5 GB</option><option value="2048">2 GB — large networks</option><option value="3072">3 GB</option></select></label>
+        <label class="f"><span>MongoDB's cache</span><select id="mm-cache" style="max-width:240px">
+          <option value="0.25">256 MB — the smallest MongoDB allows</option><option value="0.5">512 MB</option><option value="1">1 GB</option><option value="2">2 GB</option></select></label>
+        <p class="muted small" id="mm-hint"></p>
+        <button class="btn" id="mm-save" data-app>Save and restart UniFi</button></div></div>
+      <div class="card"><h2>If UniFi runs out</h2><div class="in"><p class="muted small">UniFi stops when its heap is full (Java's <i>OutOfMemoryError</i> in UniFi's server log on the Maintenance tab), and the package starts it again — if that keeps happening, give it more heap. If the NAS itself is short (DSM's Resource Monitor shows memory full and swap in use), give UniFi and MongoDB less, or add memory. MongoDB's cache is the database kept in memory; 256 MB is plenty unless the statistics are kept for a long time.</p><p class="muted small" id="mm-db"></p></div></div>
+    </section>
+
+    <div id="ub-cards" hidden>
+      <div class="card"><h2>UniFi's own backups<span class="right"><button class="btn" id="ub-copy" data-app>Copy into the shared folder now</button></span></h2>
+        <table><thead><tr><th>File</th><th class="n">Size</th><th>Made</th><th class="n"></th></tr></thead><tbody id="ub-list"></tbody></table>
+        <div class="in"><p class="muted small">UniFi makes these itself, inside its data folder — early every Monday, as the package set it up (<b>UniFi → Settings → System → Backups</b> changes how often and how many). The package copies new ones into the <b>unifi</b> shared folder, <code>autobackups/</code>, once a day, so Hyper Backup and File Station see them. A <code>.unf</code> file is what UniFi restores anywhere — on this controller (Settings → System → Backups → Restore), a fresh one, or a Cloud Key — so it's the one to keep when moving.</p></div></div>
+    </div>

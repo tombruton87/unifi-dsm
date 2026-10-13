@@ -1,0 +1,7 @@
+    echo "INFORM_PORT='$(printf '%s' "${wizard_inform_port:-8080}" | tr -cd '0-9' | head -c 5)'"
+    echo "STUN_PORT='$(printf '%s' "${wizard_stun_port:-3478}" | tr -cd '0-9' | head -c 5)'"
+    echo "DISC_PORT='$(printf '%s' "${wizard_disc_port:-10001}" | tr -cd '0-9' | head -c 5)'"
+    echo "ADMIN_USER='$(printf '%s' "${wizard_admin_user:-admin}" | tr -cd 'A-Za-z0-9._-' | head -c 32)'"
+    echo "ADMIN_EMAIL='$(printf '%s' "${wizard_admin_email:-}" | tr -cd 'A-Za-z0-9._+@-' | head -c 120)'"
+    echo "COUNTRY='$(printf '%s' "${wizard_country:-US}" | tr 'a-z' 'A-Z' | tr -cd 'A-Z' | head -c 2)'"
+    echo "TLS='$(if [ "${wizard_tls_dsm:-false}" = true ]; then echo dsm; else echo own; fi)'"

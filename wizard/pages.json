@@ -1,0 +1,35 @@
+, {
+    "step_title": "UniFi Network",
+    "items": [{
+        "type": "textfield",
+        "desc": "Your UniFi administrator is made at the first start, with a strong password shown once in the UniFi Network window in DSM — UniFi's own first-run wizard is done for you. It's a local account; you can link a UI.com account later in UniFi if you want remote access.",
+        "subitems": [
+            { "key": "wizard_admin_user", "desc": "Administrator name", "defaultValue": "admin", "validator": { "allowBlank": false, "regex": { "expr": "/^[A-Za-z0-9][A-Za-z0-9._-]{0,31}\$/", "errorText": "Letters, digits, dots, dashes — up to 32" } } },
+            { "key": "wizard_admin_email", "desc": "Your email", "defaultValue": "", "validator": { "allowBlank": false, "regex": { "expr": "/^[A-Za-z0-9._+-]+@[A-Za-z0-9.-]+\\\\.[A-Za-z]{2,}\$/", "errorText": "Looks like you@example.com" } } },
+            { "key": "wizard_country", "desc": "Country (two letters)", "defaultValue": "$(c=$(awk -v z="$tz" '$3 == z {print $1; exit}' /usr/share/zoneinfo/zone.tab 2>/dev/null | tr -cd 'A-Z'); echo "${c:-US}")", "validator": { "allowBlank": false, "regex": { "expr": "/^[A-Za-z]{2}\$/", "errorText": "Two letters, like GB, DE or US" } } }
+        ]
+    }, {
+        "type": "singleselect",
+        "desc": "The Wi-Fi rules (channels, power) follow the country, so make it the one the access points are in.<br><br>HTTPS for UniFi's web page. It can be switched later in the window.",
+        "subitems": [
+            { "key": "wizard_tls_own", "desc": "UniFi's own self-signed certificate (browsers warn once)", "defaultValue": true },
+            { "key": "wizard_tls_dsm", "desc": "DSM's certificate: the system default from Control Panel → Security → Certificate", "defaultValue": false }
+        ]
+    }]
+}, {
+    "step_title": "Ports for your UniFi devices",
+    "items": [{
+        "type": "textfield",
+        "desc": "Devices report to UniFi on the <b>inform</b> port, 8080 as standard. A new device finds UniFi by itself only on 8080 (it looks for the name <i>unifi</i> on your network); on another port every device has to be told with <code>set-inform</code> once — the window shows how. If a port is taken on this Synology, another free one is suggested.",
+        "subitems": [
+            { "key": "wizard_inform_port", "desc": "Inform port (TCP)", "defaultValue": "$(first_free 8080 8081 8088 8090 18080)", "validator": { "allowBlank": false, "regex": { "expr": "$port_expr", "errorText": "A number from 1024 to 65535 that isn't in use on this Synology" } } }
+        ]
+    }, {
+        "type": "textfield",
+        "desc": "STUN (3478) lets devices answer UniFi for things like Locate; discovery (10001) is where devices announce themselves. Both are UDP. Devices always announce on 10001, so another discovery port only means adopting by <code>set-inform</code> or the name <i>unifi</i>.",
+        "subitems": [
+            { "key": "wizard_stun_port", "desc": "STUN port (UDP)", "defaultValue": "$(first_free 3478 3479 13478)", "validator": { "allowBlank": false, "regex": { "expr": "$port_expr", "errorText": "A number from 1024 to 65535 that isn't in use on this Synology" } } },
+            { "key": "wizard_disc_port", "desc": "Discovery port (UDP)", "defaultValue": "$(first_free 10001 11001 20001)", "validator": { "allowBlank": false, "regex": { "expr": "$port_expr", "errorText": "A number from 1024 to 65535 that isn't in use on this Synology" } } }
+        ]
+    }]
+}

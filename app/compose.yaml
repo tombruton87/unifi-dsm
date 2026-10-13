@@ -1,0 +1,82 @@
+# UniFi Network, as the Synology package runs it: the compose project in the
+# unifi shared folder. The setup container writes .env beside this.
+# server: the UniFi Network Application (linuxserver.io's image), its data
+# folder in the unifi_config volume. db: MongoDB, in the unifi_db volume, on the
+# project's own network only — nothing outside can reach it. Backups go to the share.
+#
+# UniFi tells devices which ports to use, so each port is the same on the NAS
+# and inside the container (the setup container writes them into UniFi's
+# system.properties). The one exception is discovery, which devices always send to 10001.
+services:
+  db:
+    image: ${DB_IMAGE:-mongo:8.0.32}
+    container_name: unifi-db
+    restart: unless-stopped
+    # A small cache for a NAS (set on the Memory tab); no diagnostic data written every second.
+    command: ["--wiredTigerCacheSizeGB", "${DB_CACHE:-0.25}", "--setParameter", "diagnosticDataCollectionEnabled=false", "--quiet"]
+    volumes:
+      - db:/data/db
+      # linuxserver.io's init script, put there by the package: makes UniFi's own database user at the first start.
+      - dbinit:/docker-entrypoint-initdb.d:ro
+    environment:
+      TZ: UTC
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MONGO_USER: unifi
+      MONGO_PASS: ${DB_PASSWORD}
+      MONGO_DBNAME: unifi
+      MONGO_AUTHSOURCE: admin
+    healthcheck:
+      # Healthy once the real server listens on the network (while it initialises it listens on 127.0.0.1 only).
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/$$(hostname -i | cut -d' ' -f1)/27017"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  server:
+    image: ${UNIFI_IMAGE:-lscr.io/linuxserver/unifi-network-application:10.6.106-ls149}
+    container_name: unifi-server
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      # The web app and its API (HTTPS).
+      - "${HTTP_PORT:-8443}:${HTTP_PORT:-8443}"
+      # Device inform: every adopted device reports here, at http://<inform host>:<port>/inform.
+      - "${INFORM_PORT:-8080}:${INFORM_PORT:-8080}"
+      # STUN, which devices use to reach the controller for some features (locate, live updates).
+      - "${STUN_PORT:-3478}:${STUN_PORT:-3478}/udp"
+      # Device discovery (devices always use 10001).
+      - "${DISC_PORT:-10001}:10001/udp"
+      # The guest portal, only when it's on; otherwise a random port on 127.0.0.1 nobody uses.
+      - "${PORTAL_HTTP_PUB:-127.0.0.1:}:${PORTAL_HTTP:-8880}"
+      - "${PORTAL_HTTPS_PUB:-127.0.0.1:}:${PORTAL_HTTPS:-8843}"
+    volumes:
+      - config:/config
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: ${TZ:-UTC}
+      # Java's heap in MB (the Memory tab).
+      MEM_LIMIT: ${JAVA_HEAP:-1024}
+      # Only read if UniFi's settings file is missing; the package writes it before the first start.
+      MONGO_USER: unifi
+      MONGO_PASS: ${DB_PASSWORD}
+      MONGO_HOST: db
+      MONGO_PORT: "27017"
+      MONGO_DBNAME: unifi
+      MONGO_AUTHSOURCE: admin
+    healthcheck:
+      test: ["CMD-SHELL", "curl -skf --max-time 10 https://127.0.0.1:${HTTP_PORT:-8443}/status >/dev/null"]
+      interval: 60s
+      timeout: 15s
+      retries: 5
+      # A first start, or one after an update, migrates the database: minutes on a small NAS.
+      start_period: 900s
+
+volumes:
+  config:
+  db:
+  dbinit:
